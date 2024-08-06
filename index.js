@@ -61,13 +61,13 @@ function createAsset(filePath) {
   });
   //   console.log(ast);
   // 获得依赖关系 
-  const deps = [];
+  const deps = []; 
   traverse.default(ast, {
     ImportDeclaration({ node }) {
       deps.push(node.source.value);
     },
   });
-
+// 拼接代码
   const { code } = transformFromAst(ast, null, {
     presets: ["env"],
   });
@@ -97,17 +97,6 @@ function createGraph() {
   return queue;
 }
 
-function initPlugins() {
-  const plugins = webpackConfig.plugins;
-
-  plugins.forEach((plugin) => {
-    plugin.apply(hooks);
-  });
-}
-
-initPlugins();
-const graph = createGraph();
-
 function build(graph) {
   const template = fs.readFileSync("./bundle.ejs", { encoding: "utf-8" });
   const data = graph.map((asset) => {
@@ -122,6 +111,8 @@ function build(graph) {
   const code = ejs.render(template, { data });
 
   let outputPath = "./dist/bundle.js";
+
+  // plugin 中处理的事情
   const context = {
     changeOutputPath(path) {
       outputPath = path;
@@ -130,5 +121,17 @@ function build(graph) {
   hooks.emitFile.call(context);
   fs.writeFileSync(outputPath, code);
 }
+function initPlugins() {
+  const plugins = webpackConfig.plugins;
+
+  plugins.forEach((plugin) => {
+    plugin.apply(hooks);
+  });
+}
+
+initPlugins();
+const graph = createGraph();
+
+
 
 build(graph);
