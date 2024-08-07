@@ -34,7 +34,7 @@ function createAsset(filePath) {
     encoding: "utf-8",
   });
 
-  // initLoader
+  // initLoader jsonloader
   const loaders = webpackConfig.module.rules;
   const loaderContext = {
     addDeps(dep) {
@@ -44,11 +44,13 @@ function createAsset(filePath) {
 
   loaders.forEach(({ test, use }) => {
     if (test.test(filePath)) {
+      // 因为可能有多个loader，所以需要遍历
       if (Array.isArray(use)) {
         use.forEach((fn) => {
           source = fn.call(loaderContext, source);
         });
       }
+      // source = fn.call(loaderContext, source);
     }
   });
 
@@ -60,14 +62,16 @@ function createAsset(filePath) {
     sourceType: "module",
   });
   //   console.log(ast);
-  // 获得依赖关系 
-  const deps = []; 
+  // 从上面的树结构，获得依赖关系 "./foo.js"
+  const deps = [];
+  // 获取树中的变量
   traverse.default(ast, {
     ImportDeclaration({ node }) {
+      console.log(node, "node");
       deps.push(node.source.value);
     },
   });
-// 拼接代码
+  // 拼接代码,需要将 import 转换为 seajs 的模块规范,preset-env
   const { code } = transformFromAst(ast, null, {
     presets: ["env"],
   });
@@ -85,7 +89,7 @@ function createGraph() {
   const mainAsset = createAsset("./example/main.js");
 
   const queue = [mainAsset];
-
+  console.log(queue, "queue", mainAsset);
   for (const asset of queue) {
     asset.deps.forEach((relativePath) => {
       const child = createAsset(path.resolve("./example", relativePath));
@@ -112,7 +116,7 @@ function build(graph) {
 
   let outputPath = "./dist/bundle.js";
 
-  // plugin 中处理的事情
+  // plugin 中处理的事情 怎么改变输出的路径
   const context = {
     changeOutputPath(path) {
       outputPath = path;
@@ -131,7 +135,5 @@ function initPlugins() {
 
 initPlugins();
 const graph = createGraph();
-
-
 
 build(graph);
